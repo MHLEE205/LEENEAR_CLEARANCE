@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>LEENAI 搬入票ツール v2.0 — LEENEAR</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--surface3:#1f2b40;
+  --border:#2e3350;--border2:#3a4460;
+  --accent:#4f7cff;--accent2:#7c4fff;
+  --teal:#0d9488;--teal2:#0891b2;--tealg:linear-gradient(135deg,#0d9488,#0891b2);
+  --ok:#22c55e;--ng:#ef4444;--warn:#f59e0b;--info:#60a5fa;
+  --text:#e8eaf0;--sub:#8b90a8;--sub2:#4a5f80;--r:12px;
+  --shadow:0 4px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI','Hiragino Sans','Yu Gothic UI',sans-serif;padding:14px 12px 100px;max-width:960px;margin:0 auto;}
+h1{font-size:1.15rem;font-weight:800;background:linear-gradient(135deg,var(--teal),var(--teal2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px;}
+.ver{font-size:.68rem;color:var(--sub);margin-bottom:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px;box-shadow:var(--shadow);}
+.ct{font-size:.72rem;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:9px;display:flex;align-items:center;gap:6px;}
+/* API bar */
+.api-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.api-bar label{font-size:.72rem;color:var(--sub);white-space:nowrap;}
+#apiIn{flex:1;min-width:160px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:6px 9px;font-size:.73rem;font-family:monospace;outline:none;}
+#apiIn:focus{border-color:var(--teal);}
+.abtn{border:none;border-radius:7px;padding:6px 12px;font-size:.72rem;font-weight:700;cursor:pointer;}
+.abtn-s{background:var(--tealg);color:#fff;}.abtn-d{background:var(--surface2);border:1px solid var(--border);color:var(--sub);}
+#apiSt{font-size:.68rem;padding:3px 8px;border-radius:5px;display:none;width:100%;}
+#apiSt.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#86efac;display:block;}
+#apiSt.ng{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#fca5a5;display:block;}
+/* Buttons */
+.btn{width:100%;padding:10px;border:none;border-radius:9px;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit;}
+.btn-t{background:var(--tealg);color:#fff;}.btn-t:hover{opacity:.87;transform:translateY(-1px);}.btn-t:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+.btn-s{background:var(--surface2);color:var(--sub);font-size:.74rem;padding:7px;border:1px solid var(--border);}
+.btn-s:hover{border-color:var(--teal);color:var(--text);}
+.btn-row{display:flex;gap:6px;margin-top:8px;}
+.btn-row .btn{flex:1;}
+/* Alerts */
+.alert{border-radius:8px;padding:9px 12px;font-size:.72rem;margin-bottom:9px;line-height:1.55;}
+.alert-ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:#86efac;}
+.alert-warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);color:#fcd34d;}
+.alert-info{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:#93c5fd;}
+.alert-ng{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#fca5a5;}
+/* Dashboard */
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.dash-header h2{font-size:.92rem;font-weight:700;color:var(--teal);}
+.dash-stats{display:flex;gap:10px;flex-wrap:wrap;}
+.dash-stat{text-align:center;padding:6px 12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);min-width:70px;}
+.dash-stat .n{font-size:1.3rem;font-weight:800;}
+.dash-stat .n.ok{color:var(--ok);}.dash-stat .n.warn{color:var(--warn);}.dash-stat .n.ng{color:var(--ng);}.dash-stat .n.teal{color:#5eead4;}
+.dash-stat .l{font-size:.6rem;color:var(--sub);margin-top:1px;}
+/* Invoice list */
+.inv-list{display:flex;flex-direction:column;gap:6px;}
+.inv-item{display:flex;align-items:center;gap:10px;padding:10px 13px;background:var(--surface2);border:1px solid var(--border);border-radius:9px;cursor:pointer;transition:all .15s;}
+.inv-item:hover{border-color:var(--teal);background:rgba(13,148,136,.06);}
+.inv-item.processing{border-color:var(--info);background:rgba(96,165,250,.06);}
+.inv-item.done{border-color:var(--ok);background:rgba(34,197,94,.04);}
+.inv-item.has-issue{border-color:var(--warn);background:rgba(245,158,11,.04);}
+.inv-icon{font-size:1.2rem;width:28px;text-align:center;}
+.inv-info{flex:1;min-width:0;}
+.inv-name{font-size:.82rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.inv-meta{font-size:.64rem;color:var(--sub);margin-top:2px;}
+.inv-badge{font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:5px;white-space:nowrap;}
+.inv-badge.new{background:rgba(96,165,250,.15);color:var(--info);}
+.inv-badge.partial{background:rgba(245,158,11,.15);color:var(--warn);}
+.inv-badge.ready{background:rgba(34,197,94,.15);color:var(--ok);}
+.inv-badge.error{background:rgba(239,68,68,.15);color:var(--ng);}
+/* Progress */
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.prog-wrap{margin-bottom:10px;}
+.prog-bar{background:var(--surface2);border-radius:99px;height:7px;overflow:hidden;margin:5px 0;}
+.prog-fill{height:100%;background:var(--tealg);border-radius:99px;transition:width .3s;}
+.prog-msg{font-size:.68rem;color:var(--sub);}
+.log-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:250px;overflow-y:auto;font-size:.65rem;color:var(--sub);font-family:monospace;margin-top:8px;line-height:1.7;}
+.log-ok{color:var(--ok);}.log-warn{color:var(--warn);}.log-ng{color:var(--ng);}.log-info{color:var(--info);}
+/* Detail view */
+.detail-back{font-size:.74rem;color:var(--teal);cursor:pointer;margin-bottom:10px;display:inline-block;}
+.detail-back:hover{text-decoration:underline;}
+.cnt-grid{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.cnt-row{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:.73rem;}
+.cnt-no{font-weight:700;color:var(--text);width:130px;font-family:monospace;}
+.cnt-items{flex:1;display:flex;gap:12px;flex-wrap:wrap;}
+.cnt-tag{font-size:.63rem;padding:2px 7px;border-radius:4px;}
+.cnt-tag.ok{background:rgba(34,197,94,.12);color:var(--ok);}
+.cnt-tag.miss{background:rgba(239,68,68,.12);color:var(--ng);}
+.cnt-tag.warn{background:rgba(245,158,11,.12);color:var(--warn);}
+/* Output buttons */
+.out-btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.out-btn{padding:12px 10px;border:1px solid var(--border);border-radius:9px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:.75rem;font-weight:700;font-family:inherit;transition:all .2s;text-align:center;}
+.out-btn:hover{border-color:var(--teal);background:rgba(13,148,136,.06);}
+.out-btn .ob-icon{font-size:1.3rem;display:block;margin-bottom:3px;}
+.out-btn:disabled{opacity:.35;cursor:not-allowed;}
+/* Question modal */
+.q-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.q-box{background:var(--surface);border:1px solid var(--teal);border-radius:14px;padding:20px;max-width:480px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.5);}
+.q-title{font-size:.85rem;font-weight:700;color:#5eead4;margin-bottom:10px;}
+.q-text{font-size:.75rem;color:var(--text);line-height:1.6;margin-bottom:14px;}
+.q-options{display:flex;flex-direction:column;gap:6px;}
+.q-opt{padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--surface2);color:var(--text);cursor:pointer;font-size:.74rem;font-family:inherit;text-align:left;transition:all .15s;}
+.q-opt:hover{border-color:var(--teal);background:rgba(13,148,136,.08);}
+/* Hidden */
+.hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<h1>🚚 LEENAI 搬入票ツール</h1>
+<div class="ver">v2.0 Phase 2 (2026-03-29) — LEENEAR CORPORATION</div>
+
+<!-- API Key -->
+<div class="api-bar">
+  <label>🔑 API Key</label>
+  <input id="apiIn" type="password" placeholder="sk-ant-api03-...">
+  <button class="abtn abtn-s" onclick="saveKey()">保存</button>
+  <button class="abtn abtn-d" onclick="clearKey()">クリア</button>
+  <div id="apiSt"></div>
+</div>
+
+<!-- ===== VIEW: SETUP ===== -->
+<div id="viewSetup">
+  <div class="card">
+    <div class="ct">📁 作業フォルダを選択</div>
+    <div class="alert alert-info">
+      <strong>方法A — 一括スキャン:</strong> 「作業中」フォルダを選択すると、中のインボイスフォルダを自動検出して一括処理します。<br>
+      <strong>方法B — 単体処理:</strong> 個別のインボイスフォルダを直接選択することもできます。
+    </div>
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn btn-t" onclick="selectParentFolder()">📂 「作業中」フォルダを選択</button>
+      <button class="btn btn-s" onclick="selectSingleInvoice()">📁 単体インボイスフォルダ</button>
+    </div>
+    <div id="parentFolderName" class="hidden" style="margin-top:10px;font-size:.78rem;color:#5eead4;font-weight:700;"></div>
+  </div>
+</div>
+
+<!-- ===== VIEW: DASHBOARD ===== -->
+<div id="viewDashboard" class="hidden">
+  <div class="dash-header">
+    <h2 id="dashTitle">📊 ダッシュボード</h2>
+    <div class="dash-stats" id="dashStats"></div>
+  </div>
+  <div class="btn-row" style="margin-bottom:10px;">
+    <button class="btn btn-t" id="scanAllBtn" onclick="scanAllInvoices()">🔍 全フォルダスキャン開始</button>
+    <button class="btn btn-s" onclick="goView('setup')">← フォルダ変更</button>
+  </div>
+  <div id="dashProgress" class="hidden">
+    <div class="card">
+      <div class="ct"><span class="spinner"></span><span id="dashProcMsg">スキャン中...</span></div>
+      <div class="prog-wrap">
+        <div class="prog-bar"><div class="prog-fill" id="dashProgFill" style="width:0%"></div></div>
+        <div class="prog-msg" id="dashProgDetail"></div>
+      </div>
+    </div>
+  </div>
+  <div class="inv-list" id="invList"></div>
+  <div class="log-box hidden" id="dashLog" style="margin-top:10px;"></div>
+</div>
+
+<!-- ===== VIEW: DETAIL (per invoice) ===== -->
+<div id="viewDetail" class="hidden">
+  <div class="detail-back" onclick="goView('dashboard')">← ダッシュボードに戻る</div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- ===== QUESTION MODAL ===== -->
+<div id="questionModal" class="q-overlay hidden">
+  <div class="q-box">
+    <div class="q-title" id="qTitle"></div>
+    <div class="q-text" id="qText"></div>
+    <div class="q-options" id="qOptions"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG & CONSTANTS
+   ============================================================ */
+const MODEL = 'claude-sonnet-4-6';
+const API_URL = 'https://api.anthropic.com/v1/messages';
+const KEY_STORE = 'leenai_apikey_v15';
+const STATUS_FILE = '_leenai_status.json';
+const BOOKING_SUMMARY_FILE = '_booking_summary.json';
+const OLD_DIR = '_OLD';
+const PHOTO_DIR = 'PHOTO';
+
+// File extensions
+const IMG_EXTS = ['jpg','jpeg','png','bmp','gif','tif','tiff','webp'];
+const DOC_EXTS = ['pdf','xlsx','xls'];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let G = {
+  parentHandle: null,       // parent "作業中" folder handle
+  invoiceFolders: [],       // [{name, handle, status, files, containers}]
+  currentInvoice: null,     // index into invoiceFolders
+  isProcessing: false,
+  questionResolve: null     // for question modal
+};
+
+/* ============================================================
+   API KEY MANAGEMENT
+   ============================================================ */
+function saveKey(){
+  const k=document.getElementById('apiIn').value.trim();
+  if(!k.startsWith('sk-ant-')){showApiSt('ng','sk-ant- で始まるキーを入力してください');return;}
+  localStorage.setItem(KEY_STORE,k);showApiSt('ok','✅ API Keyを保存しました');
+}
+function clearKey(){localStorage.removeItem(KEY_STORE);document.getElementById('apiIn').value='';showApiSt('ng','APIキーをクリアしました');}
+function getKey(){return localStorage.getItem(KEY_STORE)||'';}
+function showApiSt(cls,msg){const el=document.getElementById('apiSt');el.className=cls;el.textContent=msg;el.style.display='block';setTimeout(()=>{el.style.display='none';},4000);}
+window.addEventListener('DOMContentLoaded',()=>{const k=getKey();if(k){document.getElementById('apiIn').value=k;showApiSt('ok','✅ 保存済みキーを読み込みました');}});
+
+/* ============================================================
+   VIEW NAVIGATION
+   ============================================================ */
+function goView(name){
+  ['viewSetup','viewDashboard','viewDetail'].forEach(id=>{
+    document.getElementById(id).classList.toggle('hidden', id !== 'view'+name.charAt(0).toUpperCase()+name.slice(1));
+  });
+}
+
+/* ============================================================
+   LOGGING
+   ============================================================ */
+function dashLog(cls, msg){
+  const box = document.getElementById('dashLog');
+  box.classList.remove('hidden');
+  const ts = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  box.innerHTML += `<div class="log-${cls}">[${ts}] ${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ============================================================
+   FOLDER SELECTION
+   ============================================================ */
+async function selectParentFolder(){
+  if(!window.showDirectoryPicker){alert('Chrome/Edge ブラウザをご使用ください。');return;}
+  try{
+    const handle = await window.showDirectoryPicker({mode:'readwrite'});
+    G.parentHandle = handle;
+    G.invoiceFolders = [];
+
+    // Skip these folder names when enumerating invoice subfolders
+    const SKIP_DIRS = [PHOTO_DIR, OLD_DIR, 'node_modules', '.git'];
+
+    // Check if selected folder itself is an invoice folder
+    // (has _booking_summary.json or source Excel or PHOTO subfolder)
+    let isInvoiceFolder = false;
+    for await(const [name, entry] of handle.entries()){
+      if(name === BOOKING_SUMMARY_FILE || name === STATUS_FILE){
+        isInvoiceFolder = true; break;
+      }
+      if(entry.kind === 'directory' && name === PHOTO_DIR){
+        isInvoiceFolder = true; break;
+      }
+      if(entry.kind === 'file' && /\.(xlsx|xls)$/i.test(name) && !name.includes('搬入表明細')){
+        isInvoiceFolder = true; break;
+      }
+      if(entry.kind === 'file' && /\.zip$/i.test(name)){
+        isInvoiceFolder = true; break;
+      }
+    }
+
+    if(isInvoiceFolder){
+      // Selected folder IS an invoice folder → treat as single invoice (方法B auto-detect)
+      G.parentHandle = null;
+      G.invoiceFolders = [{
+        name: handle.name,
+        handle: handle,
+        status: await loadStatus(handle),
+        files: [],
+        containers: [],
+        report: null
+      }];
+      dashLog('info', `📁 ${handle.name} をインボイスフォルダとして検出しました（自動判定）`);
+    } else {
+      // Enumerate subfolders as invoice folders
+      for await(const [name, entry] of handle.entries()){
+        if(entry.kind === 'directory' && !name.startsWith('_') && !name.startsWith('.') && !SKIP_DIRS.includes(name)){
+          G.invoiceFolders.push({
+            name: name,
+            handle: entry,
+            status: null,    // will be loaded from _leenai_status.json
+            files: [],
+            containers: [],
+            report: null
+          });
+        }
+      }
+
+      // Sort by name
+      G.invoiceFolders.sort((a,b) => a.name.localeCompare(b.name));
+
+      // Load existing status for each
+      for(const inv of G.invoiceFolders){
+        inv.status = await loadStatus(inv.handle);
+      }
+    }
+
+    document.getElementById('parentFolderName').textContent = `📂 ${handle.name} (${G.invoiceFolders.length} フォルダ検出)`;
+    document.getElementById('parentFolderName').classList.remove('hidden');
+
+    renderDashboard();
+    goView('dashboard');
+  }catch(e){
+    if(e.name !== 'AbortError') alert('フォルダ選択エラー: ' + e.message);
+  }
+}
+
+async function selectSingleInvoice(){
+  if(!window.showDirectoryPicker){alert('Chrome/Edge ブラウザをご使用ください。');return;}
+  try{
+    const handle = await window.showDirectoryPicker({mode:'readwrite'});
+    G.parentHandle = null;
+    G.invoiceFolders = [{
+      name: handle.name,
+      handle: handle,
+      status: await loadStatus(handle),
+      files: [],
+      containers: [],
+      report: null
+    }];
+    renderDashboard();
+    goView('dashboard');
+  }catch(e){
+    if(e.name !== 'AbortError') alert('フォルダ選択エラー: ' + e.message);
+  }
+}
+
+/* ============================================================
+   STATUS FILE (_leenai_status.json)
+   ============================================================ */
+async function loadStatus(folderHandle){
+  try{
+    const fh = await folderHandle.getFileHandle(STATUS_FILE);
+    const file = await fh.getFile();
+    const text = await file.text();
+    return JSON.parse(text);
+  }catch(e){
+    return null; // no status file yet
+  }
+}
+
+async function saveStatus(folderHandle, status){
+  try{
+    const fh = await folderHandle.getFileHandle(STATUS_FILE, {create:true});
+    const writable = await fh.createWritable();
+    await writable.write(JSON.stringify(status, null, 2));
+    await writable.close();
+  }catch(e){
+    console.error('Status save error:', e);
+  }
+}
+
+function createNewStatus(invoiceName){
+  return {
+    version: '1.5',
+    invoiceNo: invoiceName,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    processedFiles: [],        // files already processed (paths)
+    containers: {},            // {containerNo: {seal, bales, nw, gw, tw, type, photos:[], hannyuhyo:bool, ...}}
+    completeness: {
+      totalContainersFound: 0,
+      containersWithPhotos: 0,
+      containersWithHannyuhyo: 0,
+      missingItems: []
+    },
+    userConfirmedComplete: false
+  };
+}
+
+/* ============================================================
+   DASHBOARD RENDERING
+   ============================================================ */
+function renderDashboard(){
+  const title = G.parentHandle ? `📊 ${G.parentHandle.name}` : '📊 ダッシュボード';
+  document.getElementById('dashTitle').textContent = title;
+
+  // Stats
+  const total = G.invoiceFolders.length;
+  let newCount=0, partialCount=0, readyCount=0;
+  for(const inv of G.invoiceFolders){
+    if(!inv.status) newCount++;
+    else if(inv.status.userConfirmedComplete) readyCount++;
+    else partialCount++;
+  }
+
+  document.getElementById('dashStats').innerHTML = `
+    <div class="dash-stat"><div class="n teal">${total}</div><div class="l">全体</div></div>
+    <div class="dash-stat"><div class="n ${newCount?'ng':'ok'}">${newCount}</div><div class="l">未処理</div></div>
+    <div class="dash-stat"><div class="n warn">${partialCount}</div><div class="l">処理中</div></div>
+    <div class="dash-stat"><div class="n ok">${readyCount}</div><div class="l">完了</div></div>
+  `;
+
+  // Invoice list
+  const listEl = document.getElementById('invList');
+  listEl.innerHTML = '';
+
+  G.invoiceFolders.forEach((inv, idx) => {
+    const s = inv.status;
+    let icon = '📁', badgeClass = 'new', badgeText = '未処理';
+    let metaText = 'スキャン待ち';
+
+    if(s){
+      const tc = s.completeness.totalContainersFound;
+      const cp = s.completeness.containersWithPhotos;
+      const ch = s.completeness.containersWithHannyuhyo;
+      const missing = s.completeness.missingItems.length;
+
+      if(s.userConfirmedComplete){
+        icon = '✅'; badgeClass = 'ready'; badgeText = '完了';
+      } else if(missing > 0){
+        icon = '⚠️'; badgeClass = 'partial'; badgeText = `不足 ${missing}件`;
+      } else if(tc > 0){
+        icon = '📋'; badgeClass = 'ready'; badgeText = `${tc}コンテナ`;
+      }
+      metaText = `コンテナ: ${tc} | 写真: ${cp}/${tc} | 搬入票: ${ch}/${tc}`;
+      if(s.updatedAt){
+        const d = new Date(s.updatedAt);
+        metaText += ` | 更新: ${d.toLocaleDateString('ja-JP')} ${d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}`;
+      }
+    }
+
+    const div = document.createElement('div');
+    div.className = `inv-item${s ? (s.completeness.missingItems.length > 0 ? ' has-issue' : (s.userConfirmedComplete ? ' done' : '')) : ''}`;
+    div.innerHTML = `
+      <div class="inv-icon">${icon}</div>
+      <div class="inv-info">
+        <div class="inv-name">${inv.name}</div>
+        <div class="inv-meta">${metaText}</div>
+      </div>
+      <div class="inv-badge ${badgeClass}">${badgeText}</div>
+    `;
+    div.addEventListener('click', () => showInvoiceDetail(idx));
+    listEl.appendChild(div);
+  });
+}
+
+/* ============================================================
+   SCAN ALL INVOICES
+   ============================================================ */
+async function scanAllInvoices(){
+  if(G.isProcessing) return;
+  G.isProcessing = true;
+
+  const btn = document.getElementById('scanAllBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ スキャン中...';
+
+  const progSection = document.getElementById('dashProgress');
+  progSection.classList.remove('hidden');
+
+  document.getElementById('dashLog').innerHTML = '';
+  dashLog('info', `🔍 ${G.invoiceFolders.length} フォルダのスキャンを開始します`);
+
+  for(let i = 0; i < G.invoiceFolders.length; i++){
+    const inv = G.invoiceFolders[i];
+    const pct = Math.round(((i) / G.invoiceFolders.length) * 100);
+    document.getElementById('dashProgFill').style.width = pct + '%';
+    document.getElementById('dashProcMsg').textContent = `スキャン中: ${inv.name}`;
+    document.getElementById('dashProgDetail').textContent = `${i+1} / ${G.invoiceFolders.length}`;
+
+    dashLog('info', `📂 ${inv.name} をスキャン中...`);
+
+    try{
+      await processInvoiceFolder(inv);
+
+      const tc = inv.status.completeness.totalContainersFound;
+      const missing = inv.status.completeness.missingItems.length;
+      if(missing > 0){
+        dashLog('warn', `⚠️ ${inv.name}: ${tc}コンテナ検出, ${missing}件の不足あり`);
+      } else if(tc > 0){
+        dashLog('ok', `✅ ${inv.name}: ${tc}コンテナ検出, 資料完備`);
+      } else {
+        dashLog('warn', `📁 ${inv.name}: コンテナ情報なし（資料未到着？）`);
+      }
+    }catch(e){
+      dashLog('ng', `❌ ${inv.name}: エラー — ${e.message}`);
+    }
+
+    renderDashboard();
+  }
+
+  document.getElementById('dashProgFill').style.width = '100%';
+  document.getElementById('dashProcMsg').textContent = 'スキャン完了';
+  dashLog('ok', `🎉 全${G.invoiceFolders.length}フォルダのスキャンが完了しました`);
+
+  btn.disabled = false;
+  btn.textContent = '🔍 全フォルダスキャン開始';
+  G.isProcessing = false;
+}
+
+/* ============================================================
+   PROCESS SINGLE INVOICE FOLDER
+   ============================================================ */
+async function processInvoiceFolder(inv){
+  // Load or create status
+  if(!inv.status){
+    inv.status = createNewStatus(inv.name);
+  }
+
+  // 0. Try to load _booking_summary.json first (from previous tool version)
+  const bookingSummary = await loadBookingSummary(inv.handle);
+
+  // Collect all files (including ZIP extraction)
+  inv.files = [];
+  await collectFiles(inv.handle, '', inv.files, inv.status.processedFiles);
+
+  // Classify files
+  const classified = classifyFiles(inv.files);
+
+  // Identify containers from filenames, folder structure, and Excel data
+  const containerMap = await identifyContainers(classified, inv, bookingSummary);
+
+  // Count actual photos from existing PHOTO/[container]/ folders
+  await countExistingPhotos(inv.handle, containerMap);
+
+  // OCR photos for Container No. / Seal No. verification
+  await ocrContainerPhotos(containerMap, classified);
+
+  // Organize photos into container folders (skip if already organized)
+  await organizePhotos(inv.handle, containerMap, classified.photos);
+
+  // Move processed originals to _OLD
+  await moveToOld(inv.handle, inv.files, inv.status);
+
+  // Update status
+  inv.containers = Object.values(containerMap);
+  inv.status.containers = containerMap;
+  inv.status.updatedAt = new Date().toISOString();
+
+  // Calculate completeness
+  updateCompleteness(inv);
+
+  // Generate intermediate Excel
+  await generateExcel(inv);
+
+  // Save status
+  await saveStatus(inv.handle, inv.status);
+}
+
+/* ============================================================
+   BOOKING SUMMARY LOADER (_booking_summary.json)
+   ============================================================ */
+async function loadBookingSummary(folderHandle){
+  try{
+    const fh = await folderHandle.getFileHandle(BOOKING_SUMMARY_FILE);
+    const file = await fh.getFile();
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(data && data.containers && data.containers.length > 0){
+      dashLog('ok', `📋 _booking_summary.json: ${data.containers.length}コンテナ情報を読込`);
+    }
+    return data;
+  }catch(e){
+    return null; // no booking summary file
+  }
+}
+
+/* ============================================================
+   COUNT EXISTING PHOTOS IN PHOTO/[container]/ FOLDERS
+   ============================================================ */
+async function countExistingPhotos(folderHandle, containerMap){
+  let photoDir;
+  try{
+    photoDir = await folderHandle.getDirectoryHandle(PHOTO_DIR, {create: false});
+  }catch(e){
+    return; // no PHOTO folder yet
+  }
+
+  for(const [cno, cdata] of Object.entries(containerMap)){
+    try{
+      const cDir = await photoDir.getDirectoryHandle(cno, {create: false});
+      const realPhotos = [];
+      for await(const [name, entry] of cDir.entries()){
+        if(entry.kind === 'file'){
+          const ext = name.split('.').pop().toLowerCase();
+          if(IMG_EXTS.includes(ext)){
+            realPhotos.push(name);
+          }
+        }
+      }
+      // Use actual count from disk, not from status
+      cdata.photos = realPhotos;
+    }catch(e){
+      // container folder doesn't exist in PHOTO dir
+    }
+  }
+}
+
+/* ============================================================
+   FILE COLLECTION (with ZIP extraction)
+   ============================================================ */
+async function collectFiles(handle, basePath, result, processedPaths){
+  for await(const [name, entry] of handle.entries()){
+    // Skip internal folders
+    if(name.startsWith('_') || name === PHOTO_DIR || name === OLD_DIR) continue;
+    if(name === STATUS_FILE || name.endsWith('.xlsx') && name.includes('搬入表明細')) continue;
+
+    const fullPath = basePath ? `${basePath}/${name}` : name;
+
+    // Skip already processed files
+    if(processedPaths.includes(fullPath)) continue;
+
+    if(entry.kind === 'file'){
+      const ext = name.split('.').pop().toLowerCase();
+      if(ext === 'zip'){
+        try{
+          const file = await entry.getFile();
+          await extractZipRecursive(file, fullPath, result);
+        }catch(e){
+          dashLog('warn', `ZIP展開エラー: ${fullPath}`);
+        }
+      } else if([...IMG_EXTS, ...DOC_EXTS].includes(ext)){
+        try{
+          const file = await entry.getFile();
+          result.push({path: fullPath, file, ext, name, handle: entry, parentHandle: handle});
+        }catch(e){}
+      }
+    } else if(entry.kind === 'directory'){
+      try{
+        await collectFiles(entry, fullPath, result, processedPaths);
+      }catch(e){}
+    }
+  }
+}
+
+async function extractZipRecursive(file, zipPath, result, depth = 0){
+  if(depth > 5) return;
+  const buf = await file.arrayBuffer();
+  const zip = await JSZip.loadAsync(buf);
+
+  for(const [zname, zentry] of Object.entries(zip.files)){
+    if(zentry.dir) continue;
+    const ext = zname.split('.').pop().toLowerCase();
+
+    // Shift-JIS filename decode
+    let decodedName = zname;
+    try{
+      const bytes = new Uint8Array([...zname].map(c => c.charCodeAt(0)));
+      decodedName = new TextDecoder('shift-jis').decode(bytes);
+    }catch(e){}
+
+    const vpath = `${zipPath}/${decodedName}`;
+    const fname = decodedName.split('/').pop();
+
+    if(ext === 'zip'){
+      try{
+        const blob = await zentry.async('blob');
+        await extractZipRecursive(new File([blob], fname), vpath, result, depth + 1);
+      }catch(e){}
+    } else if([...IMG_EXTS, ...DOC_EXTS].includes(ext)){
+      try{
+        const blob = await zentry.async('blob');
+        result.push({path: vpath, file: new File([blob], fname), ext, name: fname, fromZip: true, zipPath});
+      }catch(e){}
+    }
+  }
+}
+
+/* ============================================================
+   FILE CLASSIFICATION
+   ============================================================ */
+function classifyFiles(files){
+  const result = {
+    hannyuhyo: [],    // 搬入票 (PDF/image)
+    photos: [],       // container/seal/yard photos
+    excel: [],        // Excel container lists
+    other: []
+  };
+
+  for(const f of files){
+    if(isExcelFile(f)){
+      result.excel.push(f);
+    } else if(isHannyuhyoFile(f)){
+      result.hannyuhyo.push(f);
+    } else if(isPhotoFile(f)){
+      result.photos.push(f);
+    } else {
+      result.other.push(f);
+    }
+  }
+
+  return result;
+}
+
+function isExcelFile(f){
+  return ['xlsx','xls'].includes(f.ext);
+}
+
+function isHannyuhyoFile(f){
+  // Filename contains 搬入票 keywords
+  if(/搬入票|搬入|反入|バンレポ|hannyuhyo/i.test(f.name)) return true;
+  if(/搬入票|搬入|反入/i.test(f.path)) return true;
+  // PDF files in certain paths might be 搬入票
+  if(f.ext === 'pdf') return true;
+  return false;
+}
+
+function isPhotoFile(f){
+  return IMG_EXTS.includes(f.ext);
+}
+
+/* ============================================================
+   CONTAINER IDENTIFICATION
+   ============================================================ */
+async function identifyContainers(classified, inv, bookingSummary){
+  const containerMap = inv.status.containers || {};
+
+  // 0. If _booking_summary.json exists, use it as primary data source
+  if(bookingSummary && bookingSummary.containers){
+    for(const bc of bookingSummary.containers){
+      const cno = (bc.no || bc.containerNo || '').toUpperCase().trim();
+      if(!cno || !/^[A-Z]{4}\d{7}$/i.test(cno)) continue;
+      if(!containerMap[cno]){
+        containerMap[cno] = {
+          containerNo: cno,
+          sealNo: bc.seal || bc.sealNo || '',
+          bales: bc.bales || 0,
+          nw: bc.nw || 0,
+          gw: bc.gw || bc.nw || 0,
+          tw: bc.tw || 0,
+          type: '45GP',
+          photos: [],
+          hasHannyuhyo: false,
+          source: 'booking_summary',
+          verified: true
+        };
+      } else {
+        // Merge data from booking_summary into existing entry (fill blanks)
+        const c = containerMap[cno];
+        if(!c.sealNo && (bc.seal || bc.sealNo)) c.sealNo = bc.seal || bc.sealNo;
+        if(!c.bales && bc.bales) c.bales = bc.bales;
+        if(!c.nw && bc.nw) c.nw = bc.nw;
+        if(!c.gw && (bc.gw || bc.nw)) c.gw = bc.gw || bc.nw;
+        if(!c.tw && bc.tw) c.tw = bc.tw;
+        c.source = 'booking_summary';
+        c.verified = true;
+      }
+    }
+  }
+
+  // 1. Try to extract container info from Excel files
+  for(const excelFile of classified.excel){
+    try{
+      const data = await parseExcelContainerList(excelFile);
+      if(data && data.length > 0){
+        dashLog('ok', `📊 ${excelFile.name}: ${data.length}コンテナ情報を検出`);
+        for(const row of data){
+          if(row.containerNo && !containerMap[row.containerNo]){
+            containerMap[row.containerNo] = {
+              containerNo: row.containerNo,
+              sealNo: row.sealNo || '',
+              bales: row.bales || 0,
+              nw: row.nw || 0,
+              gw: row.gw || 0,
+              tw: row.tw || 0,
+              type: guessContainerType(row.containerNo, '45GP'),
+              photos: [],
+              hasHannyuhyo: false,
+              source: 'excel',
+              verified: false
+            };
+          }
+        }
+      }
+    }catch(e){
+      dashLog('warn', `Excel解析エラー: ${excelFile.name}`);
+    }
+  }
+
+  // 2. Try to identify containers from photo folder structure / filenames
+  for(const photo of classified.photos){
+    const cno = extractContainerNoFromPath(photo.path) || extractContainerNoFromFilename(photo.name);
+    if(cno){
+      if(!containerMap[cno]){
+        containerMap[cno] = {
+          containerNo: cno,
+          sealNo: '',
+          bales: 0, nw: 0, gw: 0, tw: 0,
+          type: '45GP',
+          photos: [],
+          hasHannyuhyo: false,
+          source: 'photo_path',
+          verified: false
+        };
+      }
+      if(!containerMap[cno].photos.includes(photo.name)){
+        containerMap[cno].photos.push(photo.name);
+      }
+    }
+  }
+
+  // 3. If we have index-based photo naming (like "1 (1).JPG", "1 (2).JPG")
+  // and Excel container list, map by index
+  if(classified.excel.length > 0){
+    const containerOrder = Object.keys(containerMap);
+    for(const photo of classified.photos){
+      if(containerMap[Object.keys(containerMap).find(k => containerMap[k].photos.includes(photo.name))]) continue;
+
+      const idxMatch = photo.name.match(/^(\d+)\s*[\(\[（]/);
+      if(idxMatch){
+        const idx = parseInt(idxMatch[1]) - 1;
+        if(idx >= 0 && idx < containerOrder.length){
+          const cno = containerOrder[idx];
+          if(!containerMap[cno].photos.includes(photo.name)){
+            containerMap[cno].photos.push(photo.name);
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Mark hannyuhyo presence
+  for(const han of classified.hannyuhyo){
+    // Try to match hannyuhyo to container
+    const cno = extractContainerNoFromPath(han.path) || extractContainerNoFromFilename(han.name);
+    if(cno && containerMap[cno]){
+      containerMap[cno].hasHannyuhyo = true;
+    } else {
+      // If can't match to specific container, mark as general hannyuhyo present
+      // Will need OCR later to match
+    }
+  }
+
+  // 5. Unmatched photos go to _unmatched
+  const unmatchedPhotos = classified.photos.filter(p => {
+    return !Object.values(containerMap).some(c => c.photos.includes(p.name));
+  });
+
+  if(unmatchedPhotos.length > 0){
+    dashLog('warn', `📷 ${unmatchedPhotos.length}枚の写真がコンテナに未割当`);
+  }
+
+  return containerMap;
+}
+
+/* ============================================================
+   EXCEL PARSING (Container List)
+   ============================================================ */
+async function parseExcelContainerList(excelFile){
+  const buf = await excelFile.file.arrayBuffer();
+  const wb = XLSX.read(buf, {type:'array'});
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  const data = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+  // Find header row with container number pattern
+  let headerRow = -1;
+  let colMap = {};
+
+  const containerNoPattern = /container|コンテナ|CONT|番号/i;
+  const sealPattern = /seal|シール|SEAL/i;
+  const balesPattern = /bale|本|梱|個数/i;
+  const nwPattern = /n\.?w|net|正味|weight[^g]*kgs|weight[^g]*$|^weight$|^重量(?!.*(総|gross|tare|空))/i;
+  const gwPattern = /g\.?w|gross|総重量/i;
+  const twPattern = /t\.?w|tare|風袋|自重|空コンテナ|空/i;
+
+  // Strategy: First scan all rows up to 20 for header labels, then find data rows
+  // This ensures we always map header columns even when data is found first
+
+  // Pass 1: Scan for header labels in rows 0~14
+  let headerLabelRow = -1;
+  for(let r = 0; r < Math.min(15, data.length); r++){
+    const row = data[r];
+    if(!row) continue;
+    for(let c = 0; c < row.length; c++){
+      const val = String(row[c]).trim();
+      if(containerNoPattern.test(val) && colMap.containerNo === undefined){
+        colMap.containerNo = c;
+        headerLabelRow = r;
+      }
+      if(sealPattern.test(val) && colMap.seal === undefined) colMap.seal = c;
+      if(balesPattern.test(val) && colMap.bales === undefined) colMap.bales = c;
+      // Handle "WEIGHT: KGS" as N/W column
+      if(/^weight/i.test(val) && !gwPattern.test(val) && colMap.nw === undefined) colMap.nw = c;
+      else if(nwPattern.test(val) && colMap.nw === undefined) colMap.nw = c;
+      if((gwPattern.test(val) || /^gross/i.test(val)) && colMap.gw === undefined) colMap.gw = c;
+      if((twPattern.test(val) || /^tare/i.test(val)) && colMap.tw === undefined) colMap.tw = c;
+    }
+    // If we found container header + at least seal or bales, stop scanning headers
+    if(colMap.containerNo !== undefined && (colMap.seal !== undefined || colMap.bales !== undefined)) break;
+  }
+
+  if(headerLabelRow >= 0){
+    // Found header labels → data starts from next row
+    headerRow = headerLabelRow + 1;
+  }
+
+  // Pass 2: If no header found, find first row with actual container number data
+  if(headerRow < 0){
+    for(let r = 0; r < Math.min(20, data.length); r++){
+      const row = data[r];
+      if(!row) continue;
+      for(let c = 0; c < row.length; c++){
+        const val = String(row[c]).trim();
+        if(/^[A-Z]{4}\d{7}$/i.test(val)){
+          headerRow = r;
+          colMap.containerNo = c;
+
+          // Also scan the row above for header labels (in case Pass 1 missed it)
+          if(r > 0 && colMap.seal === undefined){
+            const hRow = data[r - 1];
+            if(hRow){
+              for(let hc = 0; hc < hRow.length; hc++){
+                const hval = String(hRow[hc]).trim();
+                if(sealPattern.test(hval)) colMap.seal = hc;
+                if(balesPattern.test(hval)) colMap.bales = hc;
+                if(/^weight/i.test(hval) && !gwPattern.test(hval) && colMap.nw === undefined) colMap.nw = hc;
+                else if(nwPattern.test(hval)) colMap.nw = hc;
+                if(gwPattern.test(hval) || /^gross/i.test(hval)) colMap.gw = hc;
+                if(twPattern.test(hval) || /^tare/i.test(hval)) colMap.tw = hc;
+              }
+            }
+          }
+          break;
+        }
+      }
+      if(headerRow >= 0) break;
+    }
+  }
+
+  if(headerRow < 0 || colMap.containerNo === undefined) return [];
+
+  // If we found data row directly (no header), scan nearby columns
+  if(!colMap.seal){
+    // Heuristic: seal is usually next to container no
+    const testRow = data[headerRow];
+    if(testRow){
+      for(let c = 0; c < testRow.length; c++){
+        const val = String(testRow[c]).trim();
+        if(c !== colMap.containerNo){
+          if(/^\d{5,8}$/.test(val) && !colMap.seal) colMap.seal = c;
+          if(/^\d{1,3}$/.test(val) && parseInt(val) < 100 && !colMap.bales) colMap.bales = c;
+        }
+      }
+    }
+  }
+
+  // Extract data rows
+  const containers = [];
+  for(let r = headerRow; r < data.length; r++){
+    const row = data[r];
+    if(!row) continue;
+    const cno = String(row[colMap.containerNo] || '').trim().toUpperCase();
+    if(!/^[A-Z]{4}\d{7}$/i.test(cno)) continue;
+
+    containers.push({
+      containerNo: cno,
+      sealNo: colMap.seal !== undefined ? String(row[colMap.seal] || '').trim() : '',
+      bales: colMap.bales !== undefined ? parseInt(row[colMap.bales]) || 0 : 0,
+      nw: colMap.nw !== undefined ? parseFloat(row[colMap.nw]) || 0 : 0,
+      gw: colMap.gw !== undefined ? parseFloat(row[colMap.gw]) || 0 : 0,
+      tw: colMap.tw !== undefined ? parseFloat(row[colMap.tw]) || 0 : 0
+    });
+  }
+
+  return containers;
+}
+
+/* ============================================================
+   CONTAINER NO. EXTRACTION FROM PATH/FILENAME
+   ============================================================ */
+const CONTAINER_NO_REGEX = /\b([A-Z]{4}\d{7})\b/i;
+
+function extractContainerNoFromPath(path){
+  const match = path.match(CONTAINER_NO_REGEX);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function extractContainerNoFromFilename(name){
+  const match = name.match(CONTAINER_NO_REGEX);
+  return match ? match[1].toUpperCase() : null;
+}
+
+/* ============================================================
+   CONTAINER TYPE GUESS
+   ============================================================ */
+function guessContainerType(containerNo, defaultType){
+  // LEENEAR rule: only 45GP or RAD (reefer)
+  // If container code suggests reefer (R prefix in type code area), use RAD
+  // Otherwise always 45GP
+  return defaultType || '45GP';
+}
+
+/* ============================================================
+   PHOTO ORGANIZATION (write to PHOTO/[containerNo]/)
+   ============================================================ */
+async function organizePhotos(folderHandle, containerMap, photos){
+  // Get or create PHOTO directory
+  let photoDir;
+  try{
+    photoDir = await folderHandle.getDirectoryHandle(PHOTO_DIR, {create: true});
+  }catch(e){
+    dashLog('ng', 'PHOTOフォルダ作成エラー');
+    return;
+  }
+
+  // Filter out photos that are already inside the PHOTO directory
+  // This prevents PHOTO/PHOTO duplication
+  const newPhotos = photos.filter(p => {
+    const pathParts = p.path.split('/');
+    return !pathParts.includes(PHOTO_DIR);
+  });
+
+  if(newPhotos.length === 0) return; // nothing new to organize
+
+  // Build a lookup: photo filename → file object (for quick access)
+  const photoFileMap = {};
+  for(const p of newPhotos){
+    photoFileMap[p.name] = p;
+  }
+
+  let totalCopied = 0;
+
+  for(const [cno, cdata] of Object.entries(containerMap)){
+    // Use the containerMap's photos list (already mapped by identifyContainers)
+    // This includes index-based matches like "1 (1).JPG" → first container
+    const photosToOrganize = (cdata.photos || []).filter(pname => photoFileMap[pname]);
+
+    if(photosToOrganize.length === 0) continue;
+
+    // Create container subfolder
+    let cDir;
+    try{
+      cDir = await photoDir.getDirectoryHandle(cno, {create: true});
+    }catch(e){ continue; }
+
+    // Copy photos that containerMap says belong to this container
+    for(const pname of photosToOrganize){
+      try{
+        // Check if already exists on disk
+        try{
+          await cDir.getFileHandle(pname);
+          continue; // already exists, skip
+        }catch(e){} // doesn't exist, proceed
+
+        const photoFile = photoFileMap[pname];
+        const fh = await cDir.getFileHandle(pname, {create: true});
+        const writable = await fh.createWritable();
+        await writable.write(photoFile.file);
+        await writable.close();
+        totalCopied++;
+      }catch(e){
+        // Skip silently
+      }
+    }
+  }
+
+  if(totalCopied > 0){
+    dashLog('ok', `📷 ${totalCopied}枚の写真をPHOTOフォルダに整理しました`);
+  }
+}
+
+/* ============================================================
+   MOVE ORIGINALS TO _OLD
+   ============================================================ */
+async function moveToOld(folderHandle, files, status){
+  // For now, just track processed files in status
+  // Actual file moving requires careful handling to avoid data loss
+  for(const f of files){
+    if(!status.processedFiles.includes(f.path)){
+      status.processedFiles.push(f.path);
+    }
+  }
+}
+
+/* ============================================================
+   COMPLETENESS CHECK
+   ============================================================ */
+function updateCompleteness(inv){
+  const containers = Object.values(inv.status.containers);
+  const missing = [];
+
+  let withPhotos = 0, withHan = 0;
+
+  for(const c of containers){
+    const issues = [];
+    if(c.photos.length === 0) issues.push('写真なし');
+    else{
+      withPhotos++;
+      if(c.photos.length < 3) issues.push(`写真${c.photos.length}枚のみ`);
+    }
+    if(!c.hasHannyuhyo) issues.push('搬入票なし');
+    else withHan++;
+    if(!c.sealNo) issues.push('Seal No.未確認');
+
+    if(issues.length > 0){
+      missing.push({containerNo: c.containerNo, issues});
+    }
+  }
+
+  inv.status.completeness = {
+    totalContainersFound: containers.length,
+    containersWithPhotos: withPhotos,
+    containersWithHannyuhyo: withHan,
+    missingItems: missing
+  };
+}
+
+/* ============================================================
+   PHOTO OCR FOR CONTAINER & SEAL (Claude Vision API)
+   ============================================================ */
+async function ocrPhotoForContainerSeal(photoFile){
+  const key = getKey();
+  if(!key) return null;
+
+  try{
+    // Convert photo to base64
+    const arrayBuf = await photoFile.file.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+    const mediaType = photoFile.ext === 'png' ? 'image/png' : 'image/jpeg';
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 500,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64 }
+            },
+            {
+              type: 'text',
+              text: 'この写真からコンテナ番号(Container No.)とシール番号(Seal No.)を読み取ってください。\n\nコンテナ番号は英字4文字+数字7桁(例: MRSU6066059)の形式です。\nシール番号は通常、ML-JP, MLJP, ILN等のprefix + 数字です(例: MLJP 0488056, ILN055612)。\n\n以下のJSON形式で回答してください。見つからない場合はnullとしてください。\n{"containerNo": "XXXX1234567", "sealNo": "MLJP 1234567"}'
+            }
+          ]
+        }]
+      })
+    });
+
+    if(!res.ok) return null;
+    const data = await res.json();
+    const text = data.content[0].text;
+
+    // Parse JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
+    if(jsonMatch){
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        containerNo: parsed.containerNo ? String(parsed.containerNo).trim().toUpperCase() : null,
+        sealNo: parsed.sealNo ? String(parsed.sealNo).trim() : null
+      };
+    }
+    return null;
+  }catch(e){
+    console.error('OCR error:', e);
+    return null;
+  }
+}
+
+async function ocrContainerPhotos(containerMap, classified){
+  const key = getKey();
+  if(!key){
+    dashLog('warn', '⚠️ API Key未設定: 写真OCRをスキップします');
+    return;
+  }
+
+  const allPhotos = classified.photos;
+  if(allPhotos.length === 0) return;
+
+  dashLog('info', '🔍 写真からContainer No./Seal No.をOCR中...');
+
+  // Strategy: For each container in containerMap, pick up to 2 photos to OCR
+  // If no containerMap entries yet (no Excel), OCR all photos to discover containers
+
+  const containerKeys = Object.keys(containerMap);
+  let ocrCount = 0;
+  let ocrResults = []; // collect all OCR results
+
+  if(containerKeys.length > 0){
+    // We have containers from Excel — verify with photos
+    for(const cno of containerKeys){
+      const cdata = containerMap[cno];
+      const cPhotos = (cdata.photos || []);
+
+      // Find actual photo files for this container
+      const photoFiles = cPhotos
+        .map(pname => allPhotos.find(p => p.name === pname))
+        .filter(Boolean)
+        .slice(0, 2); // max 2 photos per container for OCR
+
+      for(const pf of photoFiles){
+        const result = await ocrPhotoForContainerSeal(pf);
+        ocrCount++;
+        if(result){
+          ocrResults.push({photo: pf.name, assignedContainer: cno, ...result});
+
+          // Cross-check container number
+          if(result.containerNo && result.containerNo !== cno){
+            dashLog('warn', `⚠️ ${pf.name}: OCR=${result.containerNo} ≠ Excel=${cno}`);
+            cdata.ocrContainerNo = result.containerNo;
+            cdata.containerMismatch = true;
+          }
+
+          // Update seal from OCR (photo is ground truth)
+          if(result.sealNo){
+            if(cdata.sealNo && cdata.sealNo !== result.sealNo){
+              dashLog('warn', `🔒 ${cno}: Seal OCR="${result.sealNo}" ≠ Excel="${cdata.sealNo}"`);
+              cdata.ocrSealNo = result.sealNo;
+              cdata.sealMismatch = true;
+            } else if(!cdata.sealNo){
+              dashLog('ok', `🔒 ${cno}: Seal OCR="${result.sealNo}" (写真から取得)`);
+            }
+            // Photo is ground truth — always use OCR seal
+            cdata.sealNoFromOCR = result.sealNo;
+          }
+        }
+
+        // Rate limiting: small delay between API calls
+        if(ocrCount < containerKeys.length * 2){
+          await new Promise(r => setTimeout(r, 300));
+        }
+      }
+    }
+  } else {
+    // No Excel data — discover containers from photos
+    // OCR a selection of photos to find container numbers
+    const sampled = allPhotos.slice(0, Math.min(allPhotos.length, 30));
+    for(const pf of sampled){
+      const result = await ocrPhotoForContainerSeal(pf);
+      ocrCount++;
+      if(result && result.containerNo && /^[A-Z]{4}\d{7}$/i.test(result.containerNo)){
+        const cno = result.containerNo.toUpperCase();
+        if(!containerMap[cno]){
+          containerMap[cno] = {
+            containerNo: cno,
+            sealNo: result.sealNo || '',
+            sealNoFromOCR: result.sealNo || '',
+            bales: 0, nw: 0, gw: 0, tw: 0,
+            type: '45GP',
+            photos: [],
+            hasHannyuhyo: false,
+            source: 'photo_ocr',
+            verified: false
+          };
+        }
+        if(!containerMap[cno].photos.includes(pf.name)){
+          containerMap[cno].photos.push(pf.name);
+        }
+        if(result.sealNo){
+          containerMap[cno].sealNo = result.sealNo;
+          containerMap[cno].sealNoFromOCR = result.sealNo;
+        }
+      }
+
+      if(ocrCount < sampled.length){
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+  }
+
+  dashLog('ok', `📷 OCR完了: ${ocrCount}枚の写真を分析しました`);
+}
+
+/* ============================================================
+   EXCEL GENERATION (ExcelJS)
+   ============================================================ */
+async function generateExcel(inv){
+  const containers = Object.values(inv.status.containers);
+  if(containers.length === 0) return;
+
+  const wb = new ExcelJS.Workbook();
+
+  // Sheet 1: COMPASS入力用
+  const ws1 = wb.addWorksheet('COMPASS入力');
+
+  // Header
+  ws1.columns = [
+    {header: 'No.', key: 'no', width: 5},
+    {header: 'Container No.', key: 'containerNo', width: 16},
+    {header: 'Seal No.', key: 'sealNo', width: 14},
+    {header: 'Seal (OCR)', key: 'sealOCR', width: 16},
+    {header: 'Bales', key: 'bales', width: 8},
+    {header: 'N/W (MT)', key: 'nw', width: 10},
+    {header: 'G/W (MT)', key: 'gw', width: 10},
+    {header: 'T/W (MT)', key: 'tw', width: 10},
+    {header: 'Type', key: 'type', width: 8},
+    {header: '写真枚数', key: 'photoCount', width: 10},
+    {header: '搬入票', key: 'hannyuhyo', width: 8},
+    {header: 'ステータス', key: 'status', width: 14},
+    {header: '備考', key: 'notes', width: 20}
+  ];
+
+  // Style header
+  ws1.getRow(1).eachCell(cell => {
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF0D9488'}};
+    cell.font = {bold: true, color:{argb:'FFFFFFFF'}, size: 10};
+    cell.alignment = {horizontal:'center', vertical:'middle'};
+    cell.border = {bottom:{style:'thin', color:{argb:'FF2E3350'}}};
+  });
+
+  // Data rows
+  containers.forEach((c, i) => {
+    const issues = [];
+    if(c.photos.length === 0) issues.push('写真なし');
+    if(c.photos.length > 0 && c.photos.length < 3) issues.push('写真少');
+    if(!c.hasHannyuhyo) issues.push('搬入票なし');
+    if(!c.sealNo) issues.push('Seal未確認');
+
+    const statusText = issues.length === 0 ? '✅ OK' : '⚠️ 要確認';
+
+    const row = ws1.addRow({
+      no: i + 1,
+      containerNo: c.containerNo,
+      sealNo: c.sealNo,
+      sealOCR: c.sealNoFromOCR || '',
+      bales: c.bales,
+      nw: c.nw,
+      gw: c.gw || c.nw, // N/W = G/W rule
+      tw: c.tw,
+      type: c.type || '45GP',
+      photoCount: c.photos.length,
+      hannyuhyo: c.hasHannyuhyo ? '✅' : '❌',
+      status: statusText,
+      notes: issues.join(', ')
+    });
+
+    // Color coding
+    row.eachCell((cell, colNumber) => {
+      cell.font = {size: 10};
+      cell.alignment = {horizontal:'center', vertical:'middle'};
+
+      // Red background for container mismatch
+      if(c.containerMismatch && colNumber === 2){
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFFE6E6'}};
+        cell.font = {size: 10, color:{argb:'FFFF0000'}};
+      }
+
+      // Orange background for seal mismatch
+      if(c.sealMismatch && (colNumber === 3 || colNumber === 4)){
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF3CD'}};
+        cell.font = {size: 10, color:{argb:'FF856404'}};
+      }
+
+      // Red background for missing critical data
+      if(issues.length > 0){
+        if(colNumber === 12){ // status column (shifted by 1 for new sealOCR column)
+          cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF3CD'}};
+          cell.font = {size: 10, color:{argb:'FF856404'}};
+        }
+      }
+      if(c.photos.length === 0 && colNumber === 10){
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF8D7DA'}};
+        cell.font = {size: 10, color:{argb:'FF721C24'}};
+      }
+      if(!c.hasHannyuhyo && colNumber === 11){
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF8D7DA'}};
+        cell.font = {size: 10, color:{argb:'FF721C24'}};
+      }
+      if(!c.sealNo && colNumber === 3){
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFFFF3CD'}};
+      }
+    });
+  });
+
+  // Total row
+  const totalRow = ws1.addRow({
+    no: '',
+    containerNo: 'TOTAL',
+    sealNo: `${containers.length} Containers`,
+    bales: containers.reduce((s,c) => s + (c.bales||0), 0),
+    nw: containers.reduce((s,c) => s + (c.nw||0), 0),
+    gw: containers.reduce((s,c) => s + ((c.gw||c.nw)||0), 0),
+    tw: '',
+    type: '',
+    photoCount: containers.reduce((s,c) => s + c.photos.length, 0),
+    hannyuhyo: `${containers.filter(c=>c.hasHannyuhyo).length}/${containers.length}`,
+    status: '',
+    notes: ''
+  });
+  totalRow.eachCell(cell => {
+    cell.font = {bold: true, size: 10};
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFE8E8E8'}};
+  });
+
+  // Sheet 2: 完成度レポート
+  const ws2 = wb.addWorksheet('完成度レポート');
+  ws2.columns = [
+    {header: 'Container No.', key: 'containerNo', width: 16},
+    {header: '不足項目', key: 'issues', width: 40},
+    {header: '対応', key: 'action', width: 30}
+  ];
+  ws2.getRow(1).eachCell(cell => {
+    cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF59E0B'}};
+    cell.font = {bold: true, color:{argb:'FFFFFFFF'}, size: 10};
+  });
+
+  for(const item of inv.status.completeness.missingItems){
+    ws2.addRow({
+      containerNo: item.containerNo,
+      issues: item.issues.join(', '),
+      action: item.issues.map(i => {
+        if(i.includes('写真')) return '圧縮場に写真再送依頼';
+        if(i.includes('搬入票')) return '圧縮場に搬入票送付依頼';
+        if(i.includes('Seal')) return '写真から確認必要';
+        return '確認必要';
+      }).join(', ')
+    });
+  }
+
+  // Save to folder
+  try{
+    const buf = await wb.xlsx.writeBuffer();
+    const fh = await inv.handle.getFileHandle(`${inv.name}_搬入表明細.xlsx`, {create: true});
+    const writable = await fh.createWritable();
+    await writable.write(buf);
+    await writable.close();
+    dashLog('ok', `📊 Excel保存: ${inv.name}_搬入表明細.xlsx`);
+  }catch(e){
+    dashLog('ng', `Excel保存エラー: ${e.message}`);
+  }
+}
+
+/* ============================================================
+   INVOICE DETAIL VIEW
+   ============================================================ */
+function showInvoiceDetail(idx){
+  G.currentInvoice = idx;
+  const inv = G.invoiceFolders[idx];
+  const s = inv.status;
+
+  const el = document.getElementById('detailContent');
+
+  if(!s){
+    el.innerHTML = `
+      <div class="card">
+        <div class="ct">📁 ${inv.name}</div>
+        <div class="alert alert-info">まだスキャンされていません。ダッシュボードから「全フォルダスキャン」を実行してください。</div>
+      </div>
+    `;
+    goView('detail');
+    return;
+  }
+
+  const containers = Object.values(s.containers);
+  const comp = s.completeness;
+
+  let html = `
+    <div class="card">
+      <div class="ct">📋 ${inv.name}</div>
+      <div class="dash-stats" style="margin-bottom:12px;">
+        <div class="dash-stat"><div class="n teal">${comp.totalContainersFound}</div><div class="l">コンテナ</div></div>
+        <div class="dash-stat"><div class="n ${comp.containersWithPhotos===comp.totalContainersFound?'ok':'warn'}">${comp.containersWithPhotos}</div><div class="l">写真あり</div></div>
+        <div class="dash-stat"><div class="n ${comp.containersWithHannyuhyo===comp.totalContainersFound?'ok':'warn'}">${comp.containersWithHannyuhyo}</div><div class="l">搬入票あり</div></div>
+        <div class="dash-stat"><div class="n ${comp.missingItems.length===0?'ok':'ng'}">${comp.missingItems.length}</div><div class="l">不足件数</div></div>
+      </div>
+  `;
+
+  // Missing items alert
+  if(comp.missingItems.length > 0){
+    html += `<div class="alert alert-warn"><strong>⚠️ 不足資料:</strong><br>`;
+    for(const item of comp.missingItems){
+      html += `・${item.containerNo}: ${item.issues.join(', ')}<br>`;
+    }
+    html += `</div>`;
+  } else if(comp.totalContainersFound > 0){
+    html += `<div class="alert alert-ok">✅ 全コンテナの基本資料が揃っています。</div>`;
+  }
+
+  html += `</div>`;
+
+  // Container list
+  if(containers.length > 0){
+    html += `<div class="card"><div class="ct">📦 コンテナ一覧</div><div class="cnt-grid">`;
+
+    containers.forEach((c, i) => {
+      const photoTag = c.photos.length > 0
+        ? `<span class="cnt-tag ok">📷 ${c.photos.length}枚</span>`
+        : `<span class="cnt-tag miss">📷 なし</span>`;
+      const hanTag = c.hasHannyuhyo
+        ? `<span class="cnt-tag ok">📄 搬入票</span>`
+        : `<span class="cnt-tag miss">📄 なし</span>`;
+      const sealTag = c.sealNoFromOCR
+        ? (c.sealMismatch
+          ? `<span class="cnt-tag warn">🔒 OCR:${c.sealNoFromOCR} ≠ Excel:${c.sealNo}</span>`
+          : `<span class="cnt-tag ok">🔒 ${c.sealNoFromOCR}</span>`)
+        : (c.sealNo
+          ? `<span class="cnt-tag warn">🔒 ${c.sealNo} (Excel)</span>`
+          : `<span class="cnt-tag miss">🔒 未確認</span>`);
+
+      html += `
+        <div class="cnt-row">
+          <div style="color:var(--sub);font-size:.65rem;width:20px;">${i+1}</div>
+          <div class="cnt-no">${c.containerNo}</div>
+          <div class="cnt-items">${photoTag}${hanTag}${sealTag}
+            <span class="cnt-tag" style="background:rgba(79,124,255,.12);color:var(--accent);">${c.type||'45GP'}</span>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+  }
+
+  // Output buttons
+  html += `
+    <div class="card">
+      <div class="ct">📤 出力</div>
+      <div class="out-btn-grid">
+        <button class="out-btn" onclick="downloadInvoiceExcel(${idx})">
+          <span class="ob-icon">📊</span>
+          確認用Excel
+        </button>
+        <button class="out-btn" onclick="reprocessInvoice(${idx})">
+          <span class="ob-icon">🔄</span>
+          再スキャン
+        </button>
+      </div>
+    </div>
+  `;
+
+  el.innerHTML = html;
+  goView('detail');
+}
+
+/* ============================================================
+   RE-PROCESS & DOWNLOAD
+   ============================================================ */
+async function reprocessInvoice(idx){
+  const inv = G.invoiceFolders[idx];
+  inv.status.processedFiles = []; // reset
+  dashLog('info', `🔄 ${inv.name} を再スキャン中...`);
+  await processInvoiceFolder(inv);
+  dashLog('ok', `✅ ${inv.name} 再スキャン完了`);
+  renderDashboard();
+  showInvoiceDetail(idx);
+}
+
+async function downloadInvoiceExcel(idx){
+  const inv = G.invoiceFolders[idx];
+  if(!inv.status) return;
+
+  // Trigger re-generation and download
+  await generateExcel(inv);
+  alert(`Excel を ${inv.name} フォルダに保存しました: ${inv.name}_搬入表明細.xlsx`);
+}
+
+/* ============================================================
+   QUESTION MODAL (Semi-auto: pause and ask user)
+   ============================================================ */
+function askUser(title, text, options){
+  return new Promise(resolve => {
+    G.questionResolve = resolve;
+    document.getElementById('qTitle').textContent = title;
+    document.getElementById('qText').textContent = text;
+
+    const optEl = document.getElementById('qOptions');
+    optEl.innerHTML = '';
+    options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'q-opt';
+      btn.textContent = opt.label;
+      btn.addEventListener('click', () => {
+        document.getElementById('questionModal').classList.add('hidden');
+        resolve(opt.value);
+      });
+      optEl.appendChild(btn);
+    });
+
+    document.getElementById('questionModal').classList.remove('hidden');
+  });
+}
+
+/* ============================================================
+   CLAUDE API CALL (for future OCR)
+   ============================================================ */
+async function callClaude(messages, maxTokens = 2000){
+  const key = getKey();
+  if(!key) throw new Error('API Key未設定');
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: maxTokens,
+      messages
+    })
+  });
+
+  if(!res.ok){
+    const err = await res.text();
+    throw new Error(`API Error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+console.log('LEENAI 搬入票ツール v2.0 loaded');
+</script>
+
+</body>
+</html>
